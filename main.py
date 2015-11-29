@@ -37,7 +37,7 @@ if __name__ == '__main__':
             row += 1
         letter = random.choice(cube)
         sys.stdout.write(letter + ' ')
-        Label(root, text=letter, font=("Helvetica", 16)).grid(row=row, column=(i % 4), ipady=20, ipadx=20)
+        Label(root, text=letter, font=("Helvetica", 30)).grid(row=row, column=(i % 4), ipady=20, ipadx=20)
     
     sys.stdout.write('\n\n')
 
