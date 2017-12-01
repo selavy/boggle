@@ -142,15 +142,18 @@ static u16 set_used(u16 b, u8 x, u8 y) {
 }
 
 static int is_used(u16 b, u8 x, u8 y) {
-    return (b & get_location(x, y)) != 0;
+    // return (b & get_location(x, y)) != 0;
+    const int result = (b & (1u << get_location(x, y))) != 0;
+    // printf("Checking %u x %u? %s\n", x, y, result ? "Used": "Not Used");
+    return result;
 }
 
 struct Position {
-    u8 move;
     // TODO: change Trie interface to take length, not null terminated string
     char word[17];
-    u8 len;
     u16 used;
+    u8 len;
+    u8 move;
 };
 typedef struct Position Position;
 #define STACKSZ (1 << 20)
@@ -163,24 +166,31 @@ const s8 board[4][4] = {
     { 'p', 't', 'h', 's', },
 };
 
-static void add_move(u8 x, u8 y, const Position *p) {
+static void add_move(u8 x, u8 y, const Position *const p) {
     const u8 len = p->len;
     const u16 used = p->used;
     // printf("Adding move at (%u, %u) %u\n", x, y, len);
-    stack[stacklen].move = make_move(x, y);
-    memcpy(&stack[stacklen].word[0], &p->word[0], len);
-    stack[stacklen].word[len] = board[y][x];
-    stack[stacklen].len = len + 1;
-    stack[stacklen].used = set_used(used, x, y);
-    ++stacklen;
-    // expect(stacklen < STACKSZ, "ran out of stack space!");
-    if (!(stacklen < STACKSZ)) {
-        printf("ran out of stack space: %d\n", stacklen);
-        panic("ran out of stack space!");
-    }
+
+    Position *pos = &stack[stacklen++];
+    pos->move = make_move(x, y);
+    // memset(&pos->word[0], 0, 17); // TODO: remove, just for safety now
+    memcpy(&pos->word[0], &p->word[0], len);
+    // for (int i = 0; i < len; ++i) {
+    //     pos->word[i] = p->word[i];
+    // }
+    pos->word[len] = board[y][x];
+    pos->word[len+1] = 0; // null-terminate
+    pos->len = len + 1;
+    pos->used = set_used(used, x, y);
+
+    // printf("\tAdding letter %c at (%u, %u) [%u] '%s' -> '%s'\n", board[y][x], x, y, len + 1, &p->word[0], &pos->word[0]);
+
+    expect(stacklen < STACKSZ, "ran out of stack space!");
 }
 
 static void generate_moves(const Position *pos, const Trie *trie) {
+    // printf("Entering generate_moves: '%s'\n", &pos->word[0]);
+
     const u8 x = get_x(pos->move);
     const u8 y = get_y(pos->move);
     const u16 used = pos->used;
@@ -213,14 +223,17 @@ static void generate_moves(const Position *pos, const Trie *trie) {
     if (x < 4 && y < 4 && !is_used(used, x+1, y+1)) {
         add_move(x+1, y+1, pos);
     }
+
+    // printf("Exiting generate_moves: '%s'\n", &pos->word[0]);
 }
 
 int main(int argc, char **argv) {
-    const char *dictionary = "words_alpha.txt";
+    // const char *dictionary = "words_alpha.txt";
     Trie trie;
     Trie_init(&trie);
-    load_dictionary(&trie, dictionary);
-
+    // load_dictionary(&trie, dictionary);
+    Trie_insert(&trie, "pan");
+    // Trie_insert(&trie, "pane");
 
     // for x in 0 .. 4:
     //   for y in 0 .. 4:
@@ -234,25 +247,24 @@ int main(int argc, char **argv) {
     pos.used = set_used(0, x, y);
     generate_moves(&pos, &trie);
 
+
+    Position c;
     Position *cur;
     int result;
     while (stacklen > 0) {
-        cur = &stack[--stacklen];
+        c = stack[--stacklen];
+        cur = &c;
         result = Trie_contains(&trie, &cur->word[0]);
         if (result == 0) {
+            // printf("Failed on word: %s\n", &cur->word[0]);
             continue;
         } else if (cur->len >= 3 && result == 2) {
-            printf("Found word! %s", &cur->word[0]);
-        }
-        generate_moves(&pos, &trie);
+            printf("Found word! %s\n", &cur->word[0]);
+        } // else {
+            // printf("Continuing look for word: %s\n", &cur->word[0]);
+        // }
+        generate_moves(cur, &trie);
     }
-
-    // Position *p;
-    // printf("Stack length: %d\n\n", stacklen);
-    // for (int i = 0; i < stacklen; ++i) {
-    //     p = &stack[i];
-    //     printf("(%u,%u) %d => %s\n", get_x(p->move), get_y(p->move), p->len, &p->word[0]);
-    // }
 
     return 0;
 }
