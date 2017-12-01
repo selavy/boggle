@@ -15,8 +15,7 @@ void panic(const char *msg) {
     exit(0);
 }
 
-void expect(int cond, const char *msg) {
-    // assert(cond != 0);
+void require(int cond, const char *msg) {
     if (cond == 0) {
         panic(msg);
     }
@@ -26,7 +25,7 @@ int letter_index(char c) {
     if (!(c >= 'a' && c <= 'z')) {
         printf("letter: %c %u\n", c, c);
     }
-    expect(c >= 'a' && c <= 'z', "non-lowercase letter");
+    require(c >= 'a' && c <= 'z', "non-lowercase letter");
     return c - 'a';
 }
 
@@ -49,7 +48,7 @@ void Trie_insert(Trie *trie, const char *word) {
         index = letter_index(*word);
         if (trie->links[index] == NULL) {
             trie->links[index] = malloc(sizeof(Trie));
-            expect(trie->links[index] != NULL, "oom alloc trie link!");
+            require(trie->links[index] != NULL, "oom alloc trie link!");
         }
         prev = trie;
         trie = trie->links[index];
@@ -64,7 +63,7 @@ int Trie_contains(const Trie *trie, const char *word) {
     int index;
     const Trie *prev = NULL;
 
-    expect(*word, "null word");
+    require(*word, "null word");
     for (; *word; ++word) {
         index = letter_index(*word);
         if (trie->links[index] == NULL) {
@@ -168,12 +167,11 @@ const s8 board[4][4] = {
     { 'p', 'a', 'n', 'g', },
     { 'p', 't', 'h', 's', },
 };
-static Trie *gtrie;
 
-static void add_move(u8 x, u8 y, const Position *const p) {
+static void add_move(u8 x, u8 y, const Position *const p, const Trie *trie) {
     const u8 len = p->len;
     const u16 used = p->used;
-    expect(board[y][x] >= 'a' && board[y][x] <= 'z', "bad character in board");
+    require(board[y][x] >= 'a' && board[y][x] <= 'z', "bad character in board");
 
     Position *pos = &stack[stacklen++];
     pos->move = make_move(x, y);
@@ -184,12 +182,12 @@ static void add_move(u8 x, u8 y, const Position *const p) {
     pos->len = len + 1;
     pos->used = set_used(used, x, y);
 
-    const int result = Trie_contains(gtrie, &p->word[0]);
+    const int result = Trie_contains(trie, &p->word[0]);
     if (result == 0) {
         --stacklen;
     }
 
-    expect(stacklen < STACKSZ, "ran out of stack space!");
+    require(stacklen < STACKSZ, "ran out of stack space!");
 }
 
 static void generate_moves(const Position *pos, const Trie *trie) {
@@ -197,72 +195,59 @@ static void generate_moves(const Position *pos, const Trie *trie) {
     const u8 y = get_y(pos->move);
     const u16 used = pos->used;
 
-    // const u8 len = pos->len;
-    // if (len == 16) {
-    //     return;
-    // }
-
     if (x > 0 && !is_used(used, x-1, y)) {
-        add_move(x-1, y, pos);
+        add_move(x-1, y, pos, trie);
     }
     if (x < 3 && !is_used(used, x+1, y)) {
-        add_move(x+1, y, pos);
+        add_move(x+1, y, pos, trie);
     }
     if (y > 0 && !is_used(used, x, y-1)) {
-        add_move(x, y-1, pos);
+        add_move(x, y-1, pos, trie);
     }
     if (y < 3 && !is_used(used, x, y+1)) {
-        add_move(x, y+1, pos);
+        add_move(x, y+1, pos, trie);
     }
     if (x > 0 && y > 0 && !is_used(used, x-1, y-1)) {
-        add_move(x-1, y-1, pos);
+        add_move(x-1, y-1, pos, trie);
     }
     if (x > 0 && y < 3 && !is_used(used, x-1, y+1)) {
-        add_move(x-1, y+1, pos);
+        add_move(x-1, y+1, pos, trie);
     }
     if (x < 3 && y > 0 && !is_used(used, x+1, y-1)) {
-        add_move(x+1, y-1, pos);
+        add_move(x+1, y-1, pos, trie);
     }
     if (x < 3 && y < 3 && !is_used(used, x+1, y+1)) {
-        add_move(x+1, y+1, pos);
+        add_move(x+1, y+1, pos, trie);
     }
 }
 
 int main(int argc, char **argv) {
     const char *dictionary = "words_alpha.txt";
+    Position cur;
+    int result;
     Trie trie;
+
     Trie_init(&trie);
     load_dictionary(&trie, dictionary);
 
-    // HACK
-    gtrie = &trie;
-
     for (u8 x = 0; x < 4; ++x) {
         for (u8 y = 0; y < 4; ++y) {
-            // u8 x = 0;
-            // u8 y = 0;
-            Position pos;
-            memset(&pos, 0, sizeof(pos));
-            pos.move = make_move(x, y);
-            pos.word[0] = board[y][x];
-            pos.len = 1;
-            pos.used = set_used(0, x, y);
-            generate_moves(&pos, &trie);
-
-            Position c;
-            Position *cur;
-            int result;
+            memset(&cur, 0, sizeof(cur));
+            cur.move = make_move(x, y);
+            cur.word[0] = board[y][x];
+            cur.len = 1;
+            cur.used = set_used(0, x, y);
+            generate_moves(&cur, &trie);
             while (stacklen > 0) {
-                c = stack[--stacklen];
-                cur = &c;
-                result = Trie_contains(&trie, &cur->word[0]);
+                cur = stack[--stacklen];
+                result = Trie_contains(&trie, &cur.word[0]);
                 if (result == 0) {
                     continue;
-                } else if (cur->len >= 3 && result == 2) {
+                } else if (cur.len >= 3 && result == 2) {
                     // TODO: add set to remove duplicates
-                    printf("Found word! %s\n", &cur->word[0]);
+                    printf("Found word! %s\n", &cur.word[0]);
                 }
-                generate_moves(cur, &trie);
+                generate_moves(&cur, &trie);
             }
 
         }
