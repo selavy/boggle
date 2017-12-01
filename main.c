@@ -23,6 +23,9 @@ void expect(int cond, const char *msg) {
 }
 
 int letter_index(char c) {
+    if (!(c >= 'a' && c <= 'z')) {
+        printf("letter: %c %u\n", c, c);
+    }
     expect(c >= 'a' && c <= 'z', "non-lowercase letter");
     return c - 'a';
 }
@@ -100,7 +103,9 @@ void load_dictionary(Trie *trie, const char *dictionary) {
             if (line[i] >= 'a' && line[i] <= 'z') {
                 continue;
             } else if (line[i] >= 'A' && line[i] <= 'Z') {
-                line[i] += 'a' - 'A'; // convert to lowercase
+                // line[i] += 'a' - 'A'; // convert to lowercase
+                good = 0;
+                break;
             } else {
                 good = 0;
                 break;
@@ -173,11 +178,8 @@ static void add_move(u8 x, u8 y, const Position *const p) {
 
     Position *pos = &stack[stacklen++];
     pos->move = make_move(x, y);
-    // memset(&pos->word[0], 0, 17); // TODO: remove, just for safety now
+    memset(&pos->word[0], 0, 17); // TODO: remove, just for safety now
     memcpy(&pos->word[0], &p->word[0], len);
-    // for (int i = 0; i < len; ++i) {
-    //     pos->word[i] = p->word[i];
-    // }
     pos->word[len] = board[y][x];
     pos->word[len+1] = 0; // null-terminate
     pos->len = len + 1;
@@ -228,17 +230,17 @@ static void generate_moves(const Position *pos, const Trie *trie) {
 }
 
 int main(int argc, char **argv) {
-    // const char *dictionary = "words_alpha.txt";
+    const char *dictionary = "words_alpha.txt";
     Trie trie;
     Trie_init(&trie);
-    // load_dictionary(&trie, dictionary);
-    Trie_insert(&trie, "pan");
+    load_dictionary(&trie, dictionary);
+    // Trie_insert(&trie, "pan");
     // Trie_insert(&trie, "pane");
 
     // for x in 0 .. 4:
     //   for y in 0 .. 4:
     u8 x = 0;
-    u8 y = 2;
+    u8 y = 0;
     Position pos;
     memset(&pos, 0, sizeof(pos));
     pos.move = make_move(x, y);
