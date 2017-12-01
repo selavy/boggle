@@ -9,18 +9,41 @@ typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 
+struct Position {
+    // TODO: change Trie interface to take length, not null terminated string
+    char word[17];
+    u16 used;
+    u8 len;
+    u8 move;
+};
+typedef struct Position Position;
+
+#define STACKSZ (1 << 20)
+static Position stack[STACKSZ];
+static int stacklen = 0;
+
+const s8 board[4][4] = {
+    { 't', 'l', 'b', 'i', },
+    { 'e', 'd', 'e', 's', },
+    { 'p', 'a', 'n', 'g', },
+    { 'p', 't', 'h', 's', },
+};
+
+static
 __attribute__ ((noreturn))
 void panic(const char *msg) {
     fprintf(stderr, "PANIC: %s\n", msg);
     exit(0);
 }
 
+static
 void require(int cond, const char *msg) {
     if (cond == 0) {
         panic(msg);
     }
 }
 
+static
 int letter_index(char c) {
     if (!(c >= 'a' && c <= 'z')) {
         printf("letter: %c %u\n", c, c);
@@ -36,11 +59,13 @@ struct Trie {
 };
 typedef struct Trie Trie;
 
+static
 void Trie_init(Trie *trie) {
     memset(&trie->links[0], 0, sizeof(trie->links));
     memset(&trie->compl[0], 0, sizeof(trie->compl));
 }
 
+static
 void Trie_insert(Trie *trie, const char *word) {
     int index;
     Trie *prev = NULL;
@@ -59,6 +84,7 @@ void Trie_insert(Trie *trie, const char *word) {
     }
 }
 
+static
 int Trie_contains(const Trie *trie, const char *word) {
     int index;
     const Trie *prev = NULL;
@@ -76,6 +102,7 @@ int Trie_contains(const Trie *trie, const char *word) {
     return prev && prev->compl[index] ? 2 : 1;
 }
 
+static
 void load_dictionary(Trie *trie, const char *dictionary) {
     FILE *f;
     char *line = NULL;
@@ -150,25 +177,8 @@ static int is_used(u16 b, u8 x, u8 y) {
     return result;
 }
 
-struct Position {
-    // TODO: change Trie interface to take length, not null terminated string
-    char word[17];
-    u16 used;
-    u8 len;
-    u8 move;
-};
-typedef struct Position Position;
-#define STACKSZ (1 << 20)
-static Position stack[STACKSZ];
-static int stacklen = 0;
-const s8 board[4][4] = {
-    { 't', 'l', 'b', 'i', },
-    { 'e', 'd', 'e', 's', },
-    { 'p', 'a', 'n', 'g', },
-    { 'p', 't', 'h', 's', },
-};
-
-static void add_move(u8 x, u8 y, const Position *const p, const Trie *trie) {
+static
+void add_move(u8 x, u8 y, const Position *const p, const Trie *trie) {
     const u8 len = p->len;
     const u16 used = p->used;
     require(board[y][x] >= 'a' && board[y][x] <= 'z', "bad character in board");
@@ -190,7 +200,8 @@ static void add_move(u8 x, u8 y, const Position *const p, const Trie *trie) {
     require(stacklen < STACKSZ, "ran out of stack space!");
 }
 
-static void generate_moves(const Position *pos, const Trie *trie) {
+static
+void generate_moves(const Position *pos, const Trie *trie) {
     const u8 x = get_x(pos->move);
     const u8 y = get_y(pos->move);
     const u16 used = pos->used;
