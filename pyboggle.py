@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from collections import namedtuple
+import time
 
 
 class TrieNode: 
@@ -109,6 +110,7 @@ def generate_moves(x, y, word, used, trie):
 if __name__ == "__main__":
     trie = TrieNode("")
     nwords = 0
+    start = time.time()
     with open('words_alpha.txt') as f:
         for line in f:
             word = line.rstrip().lower()
@@ -117,7 +119,10 @@ if __name__ == "__main__":
             trie_add(trie, word)
             nwords += 1
     print(f"# Words: {nwords}")
-
+    stop = time.time()
+    print("Took {:0.4f} seconds to load dictionary".format(stop - start))
+    
+    start = time.time()
     words = set()
     for x in range(4):
         for y in range(4):
@@ -133,5 +138,7 @@ if __name__ == "__main__":
                     words.add(word)
                 if nwords > 1:
                     generate_moves(x, y, word, cur.used, trie)
+    stop = time.time()
     print(words)
     print("Found {} words".format(len(words)))
+    print("Search took {:0.4f} seconds".format(stop - start))
