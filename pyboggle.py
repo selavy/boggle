@@ -73,7 +73,7 @@ def get_location(x, y):
 
 
 def set_used(b, x, y):
-    return b | get_location(x, y)
+    return b | (1 << get_location(x, y))
 
 
 def is_used(b, x, y):
@@ -93,24 +93,17 @@ def add_move(x, y, word, used, trie):
 
 def generate_moves(x, y, word, used, trie):
     def add(xx, yy):
-        add_move(xx, yy, word, used, trie)
+        if xx >= 0 and xx <= 3 and yy >= 0 and yy <= 3 and not is_used(used, xx, yy):
+            add_move(xx, yy, word, used, trie)
 
-    if x > 0 and not is_used(used, x-1, y):
-        add(x-1, y)
-    if x < 3 and not is_used(used, x+1, y):
-        add(x+1, y)
-    if y > 0 and not is_used(used, x, y-1):
-        add(x, y-1)
-    if y < 3 and not is_used(used, x, y+1):
-        add(x, y+1)
-    if x > 0 and y > 0 and not is_used(used, x-1, y-1):
-        add(x-1, y-1)
-    if x > 0 and y < 3 and not is_used(used, x-1, y+1):
-        add(x-1, y+1)
-    if x < 3 and y > 0 and not is_used(used, x+1, y-1):
-        add(x+1, y-1)
-    if x < 3 and y < 3 and not is_used(used, x+1, y+1):
-        add(x+1, y+1)
+    add(x-1, y)
+    add(x+1, y)
+    add(x, y-1)
+    add(x, y+1)
+    add(x-1, y-1)
+    add(x-1, y+1)
+    add(x+1, y-1)
+    add(x+1, y+1)
     
 
 if __name__ == "__main__":
@@ -125,18 +118,20 @@ if __name__ == "__main__":
             nwords += 1
     print(f"# Words: {nwords}")
 
-    words = []
+    words = set()
     for x in range(4):
         for y in range(4):
-            generate_moves(x, y, word=board[x][y], used=0, trie=trie)
+            generate_moves(x, y, word=board[y][x], used=set_used(0, x, y),
+                           trie=trie)
             while stack:
                 cur = stack.pop()
                 word = cur.word
-                found, nwords, finished = trie_find_prefix(trie, cur.word)
+                x, y = cur.move
+                found, nwords, finished = trie_find_prefix(trie, word)
                 assert found is True
                 if finished and len(word) >= 3:
-                    print(f"Found word: {word}")
-                    words.append(word)
+                    words.add(word)
                 if nwords > 1:
                     generate_moves(x, y, word, cur.used, trie)
+    print(words)
     print("Found {} words".format(len(words)))
