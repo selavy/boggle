@@ -103,7 +103,7 @@ def generate_moves(x, y, word, used, trie):
         add(x, y-1)
     if y < 3 and not is_used(used, x, y+1):
         add(x, y+1)
-    if x > 0 and y > 0 and not is_used(x-1, y-1):
+    if x > 0 and y > 0 and not is_used(used, x-1, y-1):
         add(x-1, y-1)
     if x > 0 and y < 3 and not is_used(used, x-1, y+1):
         add(x-1, y+1)
@@ -125,14 +125,18 @@ if __name__ == "__main__":
             nwords += 1
     print(f"# Words: {nwords}")
 
-    x = y = 0
-    generate_moves(x, y, word=board[x][y], used=0, trie=trie)
-    while stack:
-        cur = stack.pop()
-        word = cur.word
-        found, nwords, finished = trie_find_prefix(trie, cur.word)
-        assert found is True
-        if finished and len(word) >= 3:
-            print(f"Found word: {word}")
-        if nwords > 1:
-            generate_moves(x, y, word, cur.used, trie)
+    words = []
+    for x in range(4):
+        for y in range(4):
+            generate_moves(x, y, word=board[x][y], used=0, trie=trie)
+            while stack:
+                cur = stack.pop()
+                word = cur.word
+                found, nwords, finished = trie_find_prefix(trie, cur.word)
+                assert found is True
+                if finished and len(word) >= 3:
+                    print(f"Found word: {word}")
+                    words.append(word)
+                if nwords > 1:
+                    generate_moves(x, y, word, cur.used, trie)
+    print("Found {} words".format(len(words)))
