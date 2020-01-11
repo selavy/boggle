@@ -237,6 +237,7 @@ int main(int argc, char **argv) {
     Position cur;
     int result;
     Trie trie;
+    int nwords = 0;
 
     Trie_init(&trie);
     load_dictionary(&trie, dictionary);
@@ -257,12 +258,15 @@ int main(int argc, char **argv) {
                 } else if (cur.len >= 3 && result == 2) {
                     // TODO: add set to remove duplicates
                     printf("Found word! %s\n", &cur.word[0]);
+                    ++nwords;
                 }
                 generate_moves(&cur, &trie);
             }
 
         }
     }
+
+    printf("Found %d words\n", nwords);
 
     return 0;
 }
